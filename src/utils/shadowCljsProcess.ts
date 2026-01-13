@@ -1,8 +1,8 @@
-import { type ChildProcess } from "child_process";
+import { SpawnOptions, spawnSync, type ChildProcess } from "child_process";
 import pc from "picocolors";
 import { TAG } from "../constants";
 import type { ShadowGlobalState } from "../types";
-import { killProcess } from "./killProcess";
+import { killIsolated, spawnIsolated } from "./processIsolation";
 
 const SHADOW_GLOBAL_KEY = "__SHADOW_CLJS_VITE_PLUGIN_GLOBAL__";
 
@@ -11,10 +11,14 @@ export const getGlobalState = (): null | ShadowGlobalState => {
   return (globalThis as any)[SHADOW_GLOBAL_KEY];
 };
 
-export const setGlobalShadowProcess = (proc: undefined | ChildProcess) => {
+export const setGlobalShadowProcess = (
+  proc: undefined | ChildProcess,
+  projectRoot?: string
+) => {
   const listeners = new Set<(buildId: string) => void>();
   (globalThis as any)[SHADOW_GLOBAL_KEY] = {
     process: proc,
+    projectRoot,
     buildCompleteIds: new Set(),
     notifyBuildComplete(buildId: string) {
       listeners.forEach((listener) => listener(buildId));
@@ -100,12 +104,40 @@ export function handleShadowProcessOutputs(proc: ChildProcess): void {
 }
 
 export async function stopGlobalShadowProcess() {
-  const shadowProcess = getGlobalState()?.process;
-  if (shadowProcess) {
+  const state = getGlobalState();
+  if (state?.process) {
     console.log(`${TAG} Stopping shadow-cljs...`);
 
-    await killProcess(shadowProcess);
+    await killShadowCljs(state.process, state.projectRoot);
 
     setGlobalShadowProcess(undefined);
+  }
+}
+
+export function spawnShadowCljs(
+  args: string[],
+  options: { cwd: string; stdio: SpawnOptions["stdio"] }
+): ChildProcess {
+  return spawnIsolated("shadow-cljs", args, options);
+}
+
+export async function killShadowCljs(
+  proc: ChildProcess,
+  projectRoot?: string
+): Promise<void> {
+  // Step 1: Try graceful shutdown via shadow-cljs stop
+  // This is the cleanest way as shadow-cljs knows how to stop its server
+  if (projectRoot) {
+    const res = spawnSync("shadow-cljs", ["stop"], {
+      cwd: projectRoot,
+      stdio: "ignore",
+      timeout: 2000,
+    });
+
+    if (res.status === 0) return;
+  }
+
+  if (proc.pid == null || !(await killIsolated(proc))) {
+    console.error("Terminating shadow-cljs process failed");
   }
 }

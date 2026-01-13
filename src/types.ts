@@ -20,6 +20,7 @@ export interface PluginContext {
 
 export interface ShadowGlobalState {
   process: ChildProcess | undefined;
+  projectRoot: string | undefined;
   buildCompleteIds: Set<string>;
   notifyBuildComplete(buildId: string): void;
   onBuildComplete(listener: (buildId: string) => void): () => void;

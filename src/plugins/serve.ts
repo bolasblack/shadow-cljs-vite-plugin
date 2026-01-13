@@ -1,10 +1,10 @@
-import { spawn } from "child_process";
 import type { PluginOption, ResolvedConfig } from "vite";
 import { TAG } from "../constants";
 import {
   getGlobalState,
   handleShadowProcessOutputs,
   setGlobalShadowProcess,
+  spawnShadowCljs,
   stopGlobalShadowProcess,
 } from "../utils/shadowCljsProcess";
 import type { PluginContext } from "../types";
@@ -32,9 +32,8 @@ export function createServePlugin(
       }
 
       console.log(`${TAG} Starting shadow-cljs watch...`);
-      const newShadowProcess = spawn("shadow-cljs", ["watch", ...buildIds], {
+      const newShadowProcess = spawnShadowCljs(["watch", ...buildIds], {
         stdio: ["ignore", "pipe", "pipe"],
-        detached: true,
         cwd: projectRoot,
       });
 
@@ -45,7 +44,7 @@ export function createServePlugin(
         throw error;
       }
 
-      setGlobalShadowProcess(newShadowProcess);
+      setGlobalShadowProcess(newShadowProcess, projectRoot);
       handleShadowProcessOutputs(newShadowProcess);
 
       const unlisten = getGlobalState()!.onBuildComplete((buildId) => {

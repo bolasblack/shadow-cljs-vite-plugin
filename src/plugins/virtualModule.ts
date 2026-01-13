@@ -2,14 +2,17 @@ import * as fs from "fs/promises";
 import { sep as pathSep, resolve } from "path";
 import type { PluginOption, ResolvedConfig } from "vite";
 import { TAG } from "../constants";
+import type { PluginContext, ShadowCljsOptions } from "../types";
+import { existsAsync } from "../utils/existsAsync";
 import {
   getEntryPath,
   isBrowserTarget,
   resolveConfigPath,
 } from "../utils/shadowCljsConfig";
-import { getGlobalState, waitForBuildComplete } from "../utils/shadowCljsProcess";
-import type { PluginContext, ShadowCljsOptions } from "../types";
-import { existsAsync } from "../utils/existsAsync";
+import {
+  getGlobalState,
+  waitForBuildComplete,
+} from "../utils/shadowCljsProcess";
 import {
   isShadowCljsVirtualModule,
   parseBuildIdFromVirtualId,
