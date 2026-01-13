@@ -1,6 +1,6 @@
 {
   "name": "shadow-cljs-vite-plugin",
-  "version": "0.0.4",
+  "version": "0.0.4-internal.0",
   "description": "A robust Vite plugin for seamless integration with shadow-cljs.",
   "repository": {
     "type": "git",

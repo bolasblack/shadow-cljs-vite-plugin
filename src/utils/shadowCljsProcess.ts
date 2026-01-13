@@ -127,15 +127,15 @@ export async function killShadowCljs(
 ): Promise<void> {
   // Step 1: Try graceful shutdown via shadow-cljs stop
   // This is the cleanest way as shadow-cljs knows how to stop its server
-  if (projectRoot) {
-    const res = spawnSync("shadow-cljs", ["stop"], {
-      cwd: projectRoot,
-      stdio: "ignore",
-      timeout: 2000,
-    });
+  // if (projectRoot) {
+  //   const res = spawnSync("shadow-cljs", ["stop"], {
+  //     cwd: projectRoot,
+  //     stdio: "ignore",
+  //     timeout: 2000,
+  //   });
 
-    if (res.status === 0) return;
-  }
+  //   if (res.status === 0) return;
+  // }
 
   if (proc.pid == null || !(await killIsolated(proc))) {
     console.error("Terminating shadow-cljs process failed");
