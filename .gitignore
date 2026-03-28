@@ -11,3 +11,7 @@ coverage
 .shadow-cljs
 .shadow-cljs-out
 .claude/settings.local.json
+.alca/
+.alca.local.toml
+.alca.*.local.toml
+.alca.mounts/

@@ -1,0 +1,9 @@
+{:source-paths ["src/cljs"]
+ :dependencies [[reagent "1.2.0"]]
+ :builds
+ {:app
+  {:target :esm
+   :js-options {:js-provider :import}
+   :compiler-options {:output-feature-set :es-next}
+   :output-dir ".shadow-cljs-out/app"
+   :modules {:main {:init-fn app.core/init}}}}}

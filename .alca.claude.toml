@@ -1,0 +1,13 @@
+# Alcatraz Preset Source: git+https://github.com/bolasblack/alcatraz.git#9f948d7498766b9a9dcff1ac2d0919ead4bf2cd5:.alca.claude.toml
+#:schema https://raw.githubusercontent.com/bolasblack/alcatraz/refs/heads/master/alca-config.schema.json
+
+mounts = [
+  "${HOME}/.claude/CLAUDE.md:/root/.claude/CLAUDE.md",
+  "${HOME}/.claude/skills:/root/.claude/skills",
+  "${HOME}/.claude/commands:/root/.claude/commands",
+  "${HOME}/.claude/agents:/root/.claude/agents",
+  "${HOME}/.claude/output-styles:/root/.claude/output-styles",
+  "${HOME}/.claude/plugins:/root/.claude/plugins",
+
+  "${HOME}/.claude/tasks:/root/.claude/tasks",
+]

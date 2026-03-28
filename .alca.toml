@@ -1,0 +1,40 @@
+# llms.txt: https://bolasblack.github.io/alcatraz/llms.txt
+#:schema https://raw.githubusercontent.com/bolasblack/alcatraz/refs/heads/master/alca-config.schema.json
+
+includes = ['./.alca.*.toml']
+image = 'ghcr.io/bolasblack/alca-debian:latest'
+workdir_exclude = [
+  '.env',
+  '.alca.mounts',
+  'node_modules',
+]
+mounts = [
+  '.alca.mounts/mise:/mise',
+  '.alca.mounts/extra-bin:/extra-bin',
+  '.alca.mounts/extra-scripts:/extra-scripts',
+]
+
+[commands]
+# prepare the environment
+up = """
+apt install -y vim tmux
+
+echo '
+export PATH="/extra-bin:$PATH"
+' >> ~/.bashrc
+. ~/.bashrc
+
+[ -x /extra-scripts/source.sh ] && source /extra-scripts/source.sh
+
+mise trust -a
+mise install
+
+[ -x /extra-scripts/init.sh ] && /extra-scripts/init.sh
+"""
+enter = """
+[ -x /extra-scripts/source.sh ] && source /extra-scripts/source.sh
+. ~/.bashrc
+"""
+
+[envs]
+IS_SANDBOX = '1'

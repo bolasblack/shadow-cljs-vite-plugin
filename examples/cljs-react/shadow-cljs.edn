@@ -7,7 +7,6 @@
    :compiler-options {:output-feature-set :es-next}
    :output-dir ".shadow-cljs-out/app"
    :modules {:main {:init-fn app.core/init
-                    :exports {exports app.core/exports
-                              greet app.core/greet
+                    :exports {greet app.core/greet
                               add app.core/add
-                              formattedGreeting app.core/formatted-greeting}}}}}}
+                              fibonacci app.core/fibonacci}}}}}}

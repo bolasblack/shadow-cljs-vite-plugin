@@ -48,7 +48,12 @@ Then, import the virtual module in your entry HTML or JavaScript file (e.g., `ma
 </script>
 ```
 
-**For a complete working example, you can refer to the [tests/e2e/fixtures/simple-project/](./tests/e2e/fixtures/simple-project/) directory.**
+**Working examples:**
+
+- [examples/cljs-ts-mixed/](./examples/cljs-ts-mixed/) — CLJS + TypeScript mixed project with HMR
+- [examples/cljs-react/](./examples/cljs-react/) — CLJS business logic + React UI with HMR
+- [examples/cljs-reagent/](./examples/cljs-reagent/) — Pure Reagent (ClojureScript) app with HMR
+- [tests/e2e/fixtures/simple-project/](./tests/e2e/fixtures/simple-project/) — E2E test fixture (Cloudflare Workers)
 
 ## Shadow-CLJS Configuration Requirements
 
@@ -75,9 +80,48 @@ To ensure correct integration with Vite's ES module system and avoid runtime err
 - **Default**: `shadow-cljs.edn` in the project root.
 - **Description**: The path to your shadow-cljs configuration file.
 
+## Hot Module Replacement (HMR)
+
+In dev mode, shadow-cljs handles hot-reloading of ClojureScript code via its own WebSocket + `eval()` mechanism. The plugin integrates with this by:
+
+1. **Suppressing Vite's default HMR** for shadow-cljs output files (re-importing the CLJS module tree would break the stateful ClojureScript runtime).
+2. **Auto-refreshing ES module live bindings** when shadow-cljs hot-reloads code, so consumers always see fresh values.
+3. **Dispatching a `"shadow-cljs:hot-reload"` event** on `window` after exports are refreshed, so your app can re-render.
+
+### Pure ClojureScript (Reagent, etc.)
+
+Use shadow-cljs's standard `^:dev/after-load` hook to re-render:
+
+```clojure
+(defn ^:dev/after-load on-reload []
+  (render)) ;; re-mount your root component
+```
+
+State in `defonce` atoms is preserved across reloads. See [examples/cljs-reagent/](./examples/cljs-reagent/) for a complete example.
+
+### Mixed CLJS + TypeScript/JavaScript
+
+When TypeScript/JavaScript code imports CLJS functions via `virtual:shadow-cljs/app`, the plugin generates ES module live bindings that stay fresh after hot-reload. Listen for the `"shadow-cljs:hot-reload"` event to re-render:
+
+```typescript
+import { greet, add } from "virtual:shadow-cljs/app";
+
+function render() {
+  // greet and add are always up-to-date after hot-reload
+  document.getElementById("app")!.innerHTML = `${greet("World")} ${add(1, 2)}`;
+}
+
+render();
+
+// Re-render when CLJS code changes
+window.addEventListener("shadow-cljs:hot-reload", () => render());
+```
+
+See [examples/cljs-ts-mixed/](./examples/cljs-ts-mixed/) and [examples/cljs-react/](./examples/cljs-react/) for complete examples.
+
 ## How it Works
 
-1.  **Dev Server**: When you run `vite`, this plugin spawns `shadow-cljs watch <build-id>`. It watches for output changes and triggers HMR updates in the browser.
+1.  **Dev Server**: When you run `vite`, this plugin spawns `shadow-cljs watch <build-id>`. Shadow-cljs handles file watching, recompilation, and hot-reload via its own WebSocket. The plugin suppresses Vite's default HMR for shadow-cljs output files and provides ES module live binding refresh + event dispatch for mixed CLJS/JS projects.
 2.  **Production Build**: When you run `vite build`, it spawns `shadow-cljs release <build-id>` to generate the optimized assets, which Vite then bundles.
 
 ## Tests

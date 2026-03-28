@@ -1,0 +1,19 @@
+# Alcatraz Preset Source: git+https://github.com/bolasblack/alcatraz.git#9f948d7498766b9a9dcff1ac2d0919ead4bf2cd5:.alca.pi.toml
+#:schema https://raw.githubusercontent.com/bolasblack/alcatraz/refs/heads/master/alca-config.schema.json
+
+mounts = [
+  # Core editable resources
+  "${HOME}/.pi/agent/agents:/root/.pi/agent/agents",
+  "${HOME}/.pi/agent/skills:/root/.pi/agent/skills",
+  "${HOME}/.pi/agent/prompts:/root/.pi/agent/prompts",
+  "${HOME}/.pi/agent/extensions:/root/.pi/agent/extensions",
+  "${HOME}/.pi/agent/themes:/root/.pi/agent/themes",
+
+  # Runtime config files
+  "${HOME}/.pi/agent/models.json:/root/.pi/agent/models.json",
+  "${HOME}/.pi/agent/keybindings.json:/root/.pi/agent/keybindings.json",
+
+  # Optional: keep pi runtime config/auth in sync
+  "${HOME}/.pi/agent/auth.json:/root/.pi/agent/auth.json",
+  #"${HOME}/.pi/agent/settings.json:/root/.pi/agent/settings.json",
+]

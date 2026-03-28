@@ -16,3 +16,8 @@
 
 (defn init []
   (js/console.log "ClojureScript app initialized"))
+
+(def exports
+  #js {:greet greet
+       :add add
+       :formattedGreeting formatted-greeting})

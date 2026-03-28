@@ -51,13 +51,20 @@ export function createServePlugin(
       const unlistenShadowProcessOutputs =
         handleShadowProcessOutputs(newShadowProcess);
 
-      const cleanup = () => {
-        stopGlobalShadowProcess();
+      const cleanup = async () => {
+        await stopGlobalShadowProcess();
         unlistenShadowProcessOutputs();
       };
 
-      server.httpServer?.once("close", cleanup);
-      process.once("exit", cleanup);
+      server.httpServer?.once("close", () => void cleanup());
+      process.once("exit", () => void cleanup());
+
+      const signalCleanup = async () => {
+        await cleanup();
+        process.exit(0);
+      };
+      process.once("SIGINT", () => void signalCleanup());
+      process.once("SIGTERM", () => void signalCleanup());
     },
   };
 }

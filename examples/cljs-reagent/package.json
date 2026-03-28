@@ -1,5 +1,5 @@
 {
-  "name": "cljs-ts-mixed-example",
+  "name": "cljs-reagent-example",
   "private": true,
   "type": "module",
   "scripts": {
@@ -7,10 +7,13 @@
     "build": "vite build",
     "preview": "vite preview"
   },
+  "dependencies": {
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  },
   "devDependencies": {
     "shadow-cljs": "^3.3.7",
-    "shadow-cljs-vite-plugin": "link:../..",
-    "typescript": "^5.0.0",
+    "shadow-cljs-vite-plugin": "file:../..",
     "vite": "^8.0.3"
   }
 }
