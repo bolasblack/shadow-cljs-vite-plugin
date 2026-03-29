@@ -4,6 +4,7 @@ import { TAG } from "../constants";
 import type { ShadowGlobalState } from "../types";
 import { killProcess } from "./killProcess";
 
+// AGD-002: Global singleton for shadow-cljs process lifecycle management
 const SHADOW_GLOBAL_KEY = "__SHADOW_CLJS_VITE_PLUGIN_GLOBAL__";
 
 export const getGlobalState = (): null | ShadowGlobalState => {

@@ -25,7 +25,7 @@ export function createCljsEnvPatchPlugin(
 }
 
 /**
- * Appended to cljs_env.js to make goog.provide/goog.module idempotent.
+ * AGD-001: Appended to cljs_env.js to make goog.provide/goog.module idempotent.
  *
  * Why this is needed:
  * Vite's HMR re-executes module code when files change, but globalThis state

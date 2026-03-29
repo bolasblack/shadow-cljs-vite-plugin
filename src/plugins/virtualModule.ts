@@ -23,11 +23,13 @@ export function createVirtualModulePlugin(
     name: "shadow-cljs:virtual-module",
     configResolved: initContext,
 
+    // AGD-003: Virtual module pattern — resolve virtual:shadow-cljs/<buildId>
     async resolveId(id) {
       if (!isShadowCljsVirtualModule(id)) return;
       return `\0${id}`;
     },
 
+    // AGD-003: Virtual module pattern — load shadow-cljs output as ES module
     async load(id) {
       const buildId = parseBuildIdFromVirtualId(id);
       if (!buildId) return;
@@ -44,10 +46,7 @@ export function createVirtualModulePlugin(
 
       const filePath = getEntryPath(ctx.projectRoot, buildConfig);
 
-      // In serve mode (shadow-cljs watch running), always wait for the
-      // current instance to complete its first build before reading.
-      // This prevents loading stale output from a previous session,
-      // which causes shadow-cljs "Stale Output!" warnings.
+      // AGD-006: Wait for initial build completion to prevent stale output
       if (getGlobalState()) {
         await waitForBuildComplete(buildId);
       }
@@ -64,10 +63,8 @@ export function createVirtualModulePlugin(
       const content = await fs.readFile(filePath, "utf-8");
       const hasDefaultExport = /\bexport default /m.test(content);
 
-      // In serve mode for browser targets, generate a wrapper with mutable
-      // let-bindings so ES module live bindings stay fresh after shadow-cljs
-      // hot-reloads code via eval(). Without this, consumers would see stale
-      // snapshot values from the initial module load.
+      // AGD-005: In serve mode for browser targets, generate HMR-aware wrapper
+      // with live ES module bindings
       if (getGlobalState() && isBrowserTarget(buildConfig)) {
         return generateHmrAwareModule(content, filePath, hasDefaultExport);
       }
@@ -75,7 +72,7 @@ export function createVirtualModulePlugin(
       return generateStaticModule(filePath, hasDefaultExport);
     },
 
-    // Intercept HMR for shadow-cljs output files
+    // AGD-004: Intercept HMR for shadow-cljs output files
     hotUpdate(hmrCtx) {
       const ctx = getContext();
 
@@ -83,22 +80,22 @@ export function createVirtualModulePlugin(
         const outputDir = resolve(ctx.projectRoot, buildConfig.outputDir);
         if (!hmrCtx.file.startsWith(outputDir)) continue;
 
-        // Browser targets: let shadow-cljs handle HMR, skip Vite's HMR
+        // AGD-004: Browser targets — let shadow-cljs handle HMR via
+        // WebSocket + eval. Re-importing the CLJS module tree would break
+        // the stateful ClojureScript runtime (protocol dispatch tables, etc.)
         if (isBrowserTarget(buildConfig)) {
           return [];
         }
 
-        // Non-browser targets: queue HMR update
-        // The file is already invalidated by Vite, just queue our HMR update
+        // Non-browser targets: queue HMR update via Vite
         void sendHmrUpdate(getContext, hmrCtx.server, buildConfig.id);
-
-        // Return empty array to prevent Vite's default HMR (full reload)
         return [];
       }
     },
   };
 }
 
+// AGD-003: Static re-export for build mode
 function generateStaticModule(
   filePath: string,
   hasDefaultExport: boolean,
@@ -110,6 +107,8 @@ function generateStaticModule(
 }
 
 /**
+ * AGD-005: Generate HMR-aware wrapper with live ES module bindings.
+ *
  * Parse `export let <name> = <expr>;` lines from shadow-cljs's main.js
  * and generate a wrapper module with mutable let-bindings.
  *
@@ -122,7 +121,6 @@ function generateHmrAwareModule(
   filePath: string,
   hasDefaultExport: boolean,
 ): string {
-  // Parse export lines: `export let greet = app.core.greet;`
   const exportPattern = /^export let (\w+) = (.+);$/gm;
   const exports: { name: string; expr: string }[] = [];
   let match;
@@ -140,6 +138,12 @@ function generateHmrAwareModule(
     .join("\n");
   const refreshBody = exports.map((e) => `  ${e.name} = ${e.expr};`).join("\n");
 
+  // AGD-005: The generated wrapper:
+  // 1. Imports main.js for side effects (loads CLJS runtime)
+  // 2. Declares mutable let-bindings initialized from global namespace
+  // 3. Re-exports via `export { }` which creates ES live bindings
+  // 4. Hooks SHADOW_ENV.setLoaded to detect hot-reload and refresh bindings
+  // 5. Dispatches "shadow-cljs:hot-reload" event for consumers to re-render
   return `
 import "${filePath}";
 ${declarations}
@@ -148,17 +152,20 @@ ${hasDefaultExport ? `export { default } from "${filePath}";\n` : ""}
 if (import.meta.hot) {
   import.meta.hot.accept();
 
-  // Auto-detect shadow-cljs hot-reload by hooking SHADOW_ENV.setLoaded.
+  // Detect shadow-cljs hot-reload by hooking SHADOW_ENV.setLoaded.
   // During initial page load, setLoaded is called synchronously for every
-  // module. We skip those using a flag set after synchronous execution.
-  // Only subsequent calls (from shadow-cljs WebSocket hot-reload) trigger
-  // the export refresh + event dispatch.
+  // module (~100+ times). We skip those using a flag set after synchronous
+  // execution completes (setTimeout 0). Only subsequent calls from
+  // shadow-cljs WebSocket hot-reload trigger the refresh.
+  let _initialLoadComplete = false;
   let _hmrTimer;
+  setTimeout(() => { _initialLoadComplete = true; }, 0);
 
   const _origSetLoaded = globalThis.SHADOW_ENV?.setLoaded;
   if (_origSetLoaded) {
     globalThis.SHADOW_ENV.setLoaded = function(name) {
       _origSetLoaded.call(globalThis.SHADOW_ENV, name);
+      if (!_initialLoadComplete) return;
       clearTimeout(_hmrTimer);
       _hmrTimer = setTimeout(() => {
 ${refreshBody}

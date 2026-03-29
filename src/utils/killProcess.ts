@@ -2,6 +2,8 @@ import type { ChildProcess } from "child_process";
 import os from "os";
 import { spawnAsync } from "./spawnAsync";
 
+// AGD-002: Kill the entire process group (negative pid) to ensure
+// shadow-cljs and all its JVM children are terminated together.
 export async function killProcess(proc: ChildProcess) {
   if (os.platform() === "win32") {
     await spawnAsync("taskkill", ["/PID", String(proc.pid), "/T", "/F"], {

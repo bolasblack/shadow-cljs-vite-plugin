@@ -26,13 +26,15 @@ export function createServePlugin(
 
       autoRestartViteWhenShadowCljsFileChanged(server, configPath);
 
+      // AGD-002: Reuse existing shadow-cljs process across Vite restarts
       const shadowProcess = getGlobalState()?.process;
       if (shadowProcess) {
         console.log(`${TAG} Using existing shadow-cljs process...`);
-        // HMR is handled by file watcher in virtualModule.ts
         return;
       }
 
+      // AGD-002: Spawn in a detached process group so we can kill
+      // shadow-cljs AND its JVM children together via process.kill(-pid)
       console.log(`${TAG} Starting shadow-cljs watch...`);
       const newShadowProcess = spawn("shadow-cljs", ["watch", ...buildIds], {
         stdio: ["ignore", "pipe", "pipe"],
