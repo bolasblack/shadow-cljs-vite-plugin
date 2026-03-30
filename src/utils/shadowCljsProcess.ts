@@ -2,7 +2,7 @@ import { type ChildProcess } from "child_process";
 import pc from "picocolors";
 import { TAG } from "../constants";
 import type { ShadowGlobalState } from "../types";
-import { killProcess } from "./killProcess";
+import { killProcess, type KillProcessOptions } from "./killProcess";
 
 // AGD-002: Global singleton for shadow-cljs process lifecycle management
 const SHADOW_GLOBAL_KEY = "__SHADOW_CLJS_VITE_PLUGIN_GLOBAL__";
@@ -110,12 +110,12 @@ export function handleShadowProcessOutputs(proc: ChildProcess): () => void {
   };
 }
 
-export async function stopGlobalShadowProcess() {
+export async function stopGlobalShadowProcess(opts?: KillProcessOptions) {
   const shadowProcess = getGlobalState()?.process;
   if (shadowProcess) {
     console.log(`${TAG} Stopping shadow-cljs...`);
 
-    await killProcess(shadowProcess);
+    await killProcess(shadowProcess, opts);
 
     setGlobalShadowProcess(undefined);
   }

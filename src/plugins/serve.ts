@@ -53,20 +53,25 @@ export function createServePlugin(
       const unlistenShadowProcessOutputs =
         handleShadowProcessOutputs(newShadowProcess);
 
-      const cleanup = async () => {
-        await stopGlobalShadowProcess();
+      const cleanup = async (opts?: { force?: boolean }) => {
+        await stopGlobalShadowProcess(opts);
         unlistenShadowProcessOutputs();
       };
 
       server.httpServer?.once("close", () => void cleanup());
-      process.once("exit", () => void cleanup());
 
-      const signalCleanup = async () => {
-        await cleanup();
+      // Last-resort SIGKILL — force mode has no `await`, so the
+      // SIGKILL is sent synchronously before the process terminates.
+      process.once("exit", () => void stopGlobalShadowProcess({ force: true }));
+
+      // Signal cleanup — pnpm may kill us at any await, so use force.
+      // force mode sends SIGKILL synchronously (no await), then we exit.
+      const signalCleanup = () => {
+        void stopGlobalShadowProcess({ force: true });
         process.exit(0);
       };
-      process.once("SIGINT", () => void signalCleanup());
-      process.once("SIGTERM", () => void signalCleanup());
+      process.once("SIGINT", signalCleanup);
+      process.once("SIGTERM", signalCleanup);
     },
   };
 }
