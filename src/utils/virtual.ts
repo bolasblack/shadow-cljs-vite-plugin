@@ -1,14 +1,13 @@
 import type { ViteDevServer } from "vite";
 import { pDebounce } from "./pDebounce";
 import type { PluginContext } from "../types";
-import { isBrowserTarget } from "./shadowCljsConfig";
 
 const VIRTUAL_MODULE_PREFIX = "virtual:shadow-cljs/";
 
 export type ShadowCljsVirtualId = string & { __shadowCljsVirtualId: true };
 
 export function isShadowCljsVirtualModule(
-  id: string
+  id: string,
 ): id is ShadowCljsVirtualId {
   return id.startsWith(`${VIRTUAL_MODULE_PREFIX}`);
 }
@@ -38,8 +37,8 @@ export const sendHmrUpdate = pDebounce(
     calls: [
       getCtx: () => PluginContext,
       server: ViteDevServer,
-      buildId: string
-    ][]
+      buildId: string,
+    ][],
   ) => {
     const [getCtx, server] = calls[calls.length - 1];
     const ctx = getCtx();
@@ -48,9 +47,6 @@ export const sendHmrUpdate = pDebounce(
     for (const buildId of uniqueBuildIds) {
       const buildConfig = ctx.buildConfigs.get(buildId);
       if (!buildConfig) continue;
-
-      // For browser targets, shadow-cljs handles HMR via its own WebSocket.
-      if (isBrowserTarget(buildConfig)) continue;
 
       const virtualId = toResolvedVirtualId(buildId);
       const timestamp = Date.now();
@@ -77,5 +73,5 @@ export const sendHmrUpdate = pDebounce(
       }
     }
   },
-  100
+  100,
 );

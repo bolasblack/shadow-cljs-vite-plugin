@@ -1,0 +1,20 @@
+{:source-paths ["src/cljs"]
+ :dependencies []
+ :builds
+ {:browser
+  {:target :esm
+   :js-options {:js-provider :import}
+   :compiler-options {:output-feature-set :es-next}
+   :output-dir ".shadow-cljs-out/browser"
+   :modules {:main {:init-fn app.browser/init
+                     :exports {greet app.shared/greet
+                               add app.shared/add}}}
+   :devtools {:after-load app.browser/remount}}
+  :worker
+  {:target :esm
+   :runtime :custom
+   :js-options {:js-provider :import}
+   :compiler-options {:output-feature-set :es-next}
+   :output-dir ".shadow-cljs-out/worker"
+   :modules {:worker {:entries [app.worker]
+                      :exports {default app.worker/default}}}}}}

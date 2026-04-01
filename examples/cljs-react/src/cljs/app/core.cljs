@@ -1,7 +1,7 @@
 (ns app.core)
 
 (defn greet [name]
-  (str "Hello, " name "! (from ClojureScript 13)"))
+  (str "Hello, " name "! (from ClojureScript)"))
 
 (defn add [a b]
   (+ a b))

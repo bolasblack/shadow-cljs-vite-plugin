@@ -1,19 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { greet, add, fibonacci } from "virtual:shadow-cljs/app";
 
 export default function App() {
   const [name, setName] = useState("World");
   const [fibN, setFibN] = useState(10);
-  const [, forceRender] = useState(0);
-
-  // Re-render when shadow-cljs hot-reloads CLJS code.
-  // The plugin refreshes the ES module live bindings automatically;
-  // we just need to trigger a React re-render to pick up new values.
-  useEffect(() => {
-    const onReload = () => forceRender((n) => n + 1);
-    window.addEventListener("shadow-cljs:hot-reload", onReload);
-    return () => window.removeEventListener("shadow-cljs:hot-reload", onReload);
-  }, []);
 
   return (
     <div

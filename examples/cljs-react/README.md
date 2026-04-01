@@ -12,9 +12,8 @@ Demonstrates using ClojureScript business logic in a React app with Vite HMR.
 
 1. Edit `src/cljs/app/core.cljs` (e.g., change the greeting message)
 2. shadow-cljs detects the change, recompiles, and hot-reloads via WebSocket + eval
-3. The plugin detects the reload, refreshes ES module exports, and dispatches `"shadow-cljs:hot-reload"`
-4. The React component listens for the event and re-renders with fresh values
-5. React state (input values, etc.) is preserved across reloads
+3. The plugin detects eval completion, refreshes ES module live bindings, and triggers React Fast Refresh
+4. React state (input values, etc.) is preserved across reloads — no manual event listeners needed
 
 ## Getting started
 

@@ -20,6 +20,7 @@ up = """
 apt install -y vim tmux
 
 echo '
+export PATH="/mise/shims:$PATH"
 export PATH="/extra-bin:$PATH"
 ' >> ~/.bashrc
 . ~/.bashrc

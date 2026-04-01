@@ -25,7 +25,9 @@ function render() {
 
 render();
 
-// Re-render when shadow-cljs hot-reloads CLJS code.
-// The plugin auto-detects reload and refreshes ES module live bindings,
-// then dispatches this event so consumers can re-render.
-window.addEventListener("shadow-cljs:hot-reload", () => render());
+// HMR: the plugin sends js-update for importers after shadow-cljs
+// hot-reloads.  Self-accept so Vite re-runs render() instead of
+// doing a full page reload.
+if (import.meta.hot) {
+  import.meta.hot.accept(() => render());
+}

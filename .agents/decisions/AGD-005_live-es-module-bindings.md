@@ -1,8 +1,10 @@
 ---
-title: "Live ES module bindings for mixed CLJS+TS HMR"
-description: "Generate a wrapper module with mutable let-bindings and SHADOW_ENV.setLoaded hook to auto-refresh exports after shadow-cljs hot-reload"
+title: Live ES module bindings for mixed CLJS+TS HMR
+description: Generate a wrapper module with mutable let-bindings and SHADOW_ENV.setLoaded hook to auto-refresh exports after shadow-cljs hot-reload
 tags: hmr, dev-experience
+obsoleted_by: AGD-007
 ---
+
 
 ## Context
 

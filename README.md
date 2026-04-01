@@ -50,9 +50,10 @@ Then, import the virtual module in your entry HTML or JavaScript file (e.g., `ma
 
 **Working examples:**
 
+- [examples/cljs-react/](./examples/cljs-react/) — CLJS business logic + React UI with auto HMR
 - [examples/cljs-ts-mixed/](./examples/cljs-ts-mixed/) — CLJS + TypeScript mixed project with HMR
-- [examples/cljs-react/](./examples/cljs-react/) — CLJS business logic + React UI with HMR
 - [examples/cljs-reagent/](./examples/cljs-reagent/) — Pure Reagent (ClojureScript) app with HMR
+- [examples/cljs-cloudflare-worker/](./examples/cljs-cloudflare-worker/) — CLJS shared between browser + Cloudflare Worker (SSR)
 - [tests/e2e/fixtures/simple-project/](./tests/e2e/fixtures/simple-project/) — E2E test fixture (Cloudflare Workers)
 
 ## Shadow-CLJS Configuration Requirements
@@ -86,7 +87,41 @@ In dev mode, shadow-cljs handles hot-reloading of ClojureScript code via its own
 
 1. **Suppressing Vite's default HMR** for shadow-cljs output files (re-importing the CLJS module tree would break the stateful ClojureScript runtime).
 2. **Auto-refreshing ES module live bindings** when shadow-cljs hot-reloads code, so consumers always see fresh values.
-3. **Dispatching a `"shadow-cljs:hot-reload"` event** on `window` after exports are refreshed, so your app can re-render.
+3. **Triggering React Fast Refresh** (or custom re-render) automatically — no manual event listeners needed.
+
+### React (recommended)
+
+With `@vitejs/plugin-react`, HMR works automatically. Just import and use:
+
+```tsx
+import { greet, add } from "virtual:shadow-cljs/app";
+
+export default function App() {
+  return <p>{greet("World")} — {add(1, 2)}</p>;
+}
+```
+
+Edit your `.cljs` files and the React component re-renders with fresh values. No `useEffect`, no event listeners. See [examples/cljs-react/](./examples/cljs-react/).
+
+### Vanilla TypeScript/JavaScript
+
+For non-React projects, use `import.meta.hot.accept()` to re-render:
+
+```typescript
+import { greet, add } from "virtual:shadow-cljs/app";
+
+function render() {
+  document.getElementById("app")!.innerHTML = `${greet("World")} ${add(1, 2)}`;
+}
+
+render();
+
+if (import.meta.hot) {
+  import.meta.hot.accept(() => render());
+}
+```
+
+See [examples/cljs-ts-mixed/](./examples/cljs-ts-mixed/).
 
 ### Pure ClojureScript (Reagent, etc.)
 
@@ -97,31 +132,11 @@ Use shadow-cljs's standard `^:dev/after-load` hook to re-render:
   (render)) ;; re-mount your root component
 ```
 
-State in `defonce` atoms is preserved across reloads. See [examples/cljs-reagent/](./examples/cljs-reagent/) for a complete example.
-
-### Mixed CLJS + TypeScript/JavaScript
-
-When TypeScript/JavaScript code imports CLJS functions via `virtual:shadow-cljs/app`, the plugin generates ES module live bindings that stay fresh after hot-reload. Listen for the `"shadow-cljs:hot-reload"` event to re-render:
-
-```typescript
-import { greet, add } from "virtual:shadow-cljs/app";
-
-function render() {
-  // greet and add are always up-to-date after hot-reload
-  document.getElementById("app")!.innerHTML = `${greet("World")} ${add(1, 2)}`;
-}
-
-render();
-
-// Re-render when CLJS code changes
-window.addEventListener("shadow-cljs:hot-reload", () => render());
-```
-
-See [examples/cljs-ts-mixed/](./examples/cljs-ts-mixed/) and [examples/cljs-react/](./examples/cljs-react/) for complete examples.
+State in `defonce` atoms is preserved across reloads. See [examples/cljs-reagent/](./examples/cljs-reagent/).
 
 ## How it Works
 
-1.  **Dev Server**: When you run `vite`, this plugin spawns `shadow-cljs watch <build-id>`. Shadow-cljs handles file watching, recompilation, and hot-reload via its own WebSocket. The plugin suppresses Vite's default HMR for shadow-cljs output files and provides ES module live binding refresh + event dispatch for mixed CLJS/JS projects.
+1.  **Dev Server**: When you run `vite`, this plugin spawns `shadow-cljs watch <build-id>`. Shadow-cljs handles file watching, recompilation, and hot-reload via its own WebSocket. The plugin suppresses Vite's default HMR for shadow-cljs output files, detects eval completion by polling the global namespace, and triggers React Fast Refresh for importers.
 2.  **Production Build**: When you run `vite build`, it spawns `shadow-cljs release <build-id>` to generate the optimized assets, which Vite then bundles.
 
 ## Tests

@@ -35,5 +35,8 @@ export function shadowCljs(options: ShadowCljsOptions): PluginOption[] {
     options
   );
 
-  return [virtualModulePlugin, cljsEnvPatchPlugin, buildPlugin, servePlugin];
+  // servePlugin must be before virtualModulePlugin so that shadow-cljs
+  // is started (and global state is set) before virtualModule's
+  // configureServer registers the build-complete listener.
+  return [servePlugin, virtualModulePlugin, cljsEnvPatchPlugin, buildPlugin];
 }

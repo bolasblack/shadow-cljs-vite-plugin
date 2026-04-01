@@ -1,0 +1,6 @@
+name = "cljs-cloudflare-worker-example"
+compatibility_date = "2025-01-01"
+
+[assets]
+directory = "./dist/client"
+binding = "ASSETS"

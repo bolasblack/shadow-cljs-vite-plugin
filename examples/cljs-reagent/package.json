@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "shadow-cljs": "^3.3.7",
-    "shadow-cljs-vite-plugin": "file:../..",
+    "shadow-cljs-vite-plugin": "link:../..",
     "vite": "^8.0.3"
   }
 }
