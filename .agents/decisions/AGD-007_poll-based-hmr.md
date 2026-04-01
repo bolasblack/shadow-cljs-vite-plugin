@@ -103,7 +103,7 @@ if (_origSetLoaded) {
 
 After the client-side custom event handler refreshes bindings, call `import.meta.hot.invalidate()` to propagate the change to importers (App.tsx) via Vite's HMR boundary system.
 
-**Rejected because:** `invalidate()` sends a `vite:invalidate` WebSocket message to the server with the module's URL path. The server handler looks up the module by file path (`mod.file`), but virtual modules have `file = null` (no file on disk). The server silently drops the invalidation — confirmed by browser logs showing `[vite] invalidate /@id/__x00__virtual:shadow-cljs/app` with no subsequent `js-update`.
+**Rejected because:** URL mismatch between client and server. The client sends `vite:invalidate` with path `/@id/__x00__virtual:shadow-cljs/app` (the browser-side URL), but the module in Vite's server-side module graph has `mod.url = virtual:shadow-cljs/app` (no `/@id/__x00__` prefix). Vite's internal invalidation handler looks up the module by the client-provided path and fails to find it — the invalidation is silently dropped. Confirmed by: server does receive the event (`env.hot.on('vite:invalidate')` fires), `mod.file` is not null (`virtual:shadow-cljs/app`), but no `js-update` is ever sent back. This is the same URL mismatch that prevents sending `js-update` for the virtual module directly (see #4).
 
 #### 3. Fixed delay (100ms) after build-complete
 
@@ -137,3 +137,59 @@ Use property descriptors on the global namespace (e.g., `app.core.greet`) to int
 - No monkey-patching of shadow-cljs internals
 - Polling overhead is negligible (only runs after build-complete, stops immediately on detection)
 - In production builds, the standard `export * from "main.js"` is used (no wrapper)
+
+## Known Issue: Vite virtual module URL mismatch
+
+Virtual modules have inconsistent URLs between client and server in Vite 8:
+
+- Browser-side URL: `/@id/__x00__virtual:shadow-cljs/app`
+- Server-side `mod.url`: `virtual:shadow-cljs/app`
+
+This mismatch causes two problems:
+
+1. **`invalidate()` silently fails.** The client sends `vite:invalidate` with the browser-side URL. The server receives the event (confirmed via `env.hot.on('vite:invalidate')`), but Vite's internal handler can't resolve it back to the module. No `js-update` is produced.
+
+2. **`js-update` for virtual modules is ignored.** Sending `js-update` with `mod.url` as the path doesn't match the browser's module registry. The browser silently skips it.
+
+Both were confirmed experimentally. This is likely a Vite bug — `/@id/__x00__` encoding is Vite's own convention, and its internal handlers should be able to resolve it.
+
+**Upstream PR:** https://github.com/vitejs/vite/pull/22098
+
+**After the PR is merged**, the `eval-complete` round-trip can be eliminated. Simplified flow:
+
+```
+Server: build-complete → Client
+Client: poll → refresh bindings → invalidate()
+Vite auto-propagates to importers → React re-renders
+```
+
+Server-side `configureServer` simplifies to just sending the `build-complete` event:
+
+```js
+// Step 2 (eval-complete listener + js-update) is no longer needed
+state.onBuildComplete((buildId) => {
+  for (const env of Object.values(server.environments)) {
+    env.hot.send("shadow-cljs:build-complete", { buildId });
+  }
+});
+```
+
+Client-side generated code replaces `import.meta.hot.send('eval-complete')` with `invalidate()`:
+
+```js
+import.meta.hot.on('shadow-cljs:build-complete', () => {
+  const _prev = _getExports();
+  const _poll = () => {
+    if (changed || timeout) {
+      greet = app.core.greet;                      // refresh bindings
+      import.meta.hot.invalidate('shadow-cljs');   // Vite propagates to importers
+      return;
+    }
+    setTimeout(_poll, 5);
+  };
+  _poll();
+});
+import.meta.hot.accept();
+```
+
+This removes the `eval-complete` listener, `js-update` sending logic, and the `toResolvedVirtualId` + `moduleGraph.getModuleById` lookups from the server.

@@ -155,6 +155,13 @@ pnpm test
 
 If you are using this project, feel free to submit a PR to add it here.
 
+## Upstream Contributions
+
+Issues discovered during development of this plugin that led to upstream fixes:
+
+- **shadow-cljs** — [thheller/shadow-cljs#1249](https://github.com/thheller/shadow-cljs/pull/1249): Fix ES module import compatibility (merged in v3.3.5)
+- **Vite** — [vitejs/vite#22098](https://github.com/vitejs/vite/pull/22098): `import.meta.hot.invalidate()` silently fails for virtual modules due to URL mismatch between client (`/@id/__x00__...`) and server (`mod.url`)
+
 ## Contributing
 
 Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for details on the code structure and how to submit changes.
