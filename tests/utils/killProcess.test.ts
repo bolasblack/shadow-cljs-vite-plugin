@@ -118,11 +118,12 @@ describe("killProcess", () => {
       `);
       spawnedPids.push(proc.pid!);
 
-      await new Promise((r) => setTimeout(r, 300));
+      // Wait for grandchild to start writing the marker file
+      await new Promise((r) => setTimeout(r, 500));
       expect(fs.existsSync(marker)).toBe(true);
 
       await killProcess(proc);
-      await new Promise((r) => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 500));
 
       const mtimeBefore = fs.statSync(marker).mtimeMs;
       await new Promise((r) => setTimeout(r, 200));

@@ -1,0 +1,10 @@
+{:source-paths ["src"]
+ :dependencies []
+ :builds
+ {:app
+  {:target :esm
+   :js-options {:js-provider :import}
+   :compiler-options {:output-feature-set :es-next}
+   :output-dir ".shadow-cljs-out/app"
+   :modules {:main {:entries [my.app]
+                     :exports {greet my.app/greet}}}}}}
