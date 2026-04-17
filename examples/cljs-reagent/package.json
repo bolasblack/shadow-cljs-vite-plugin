@@ -12,8 +12,8 @@
     "react-dom": "^18.3.0"
   },
   "devDependencies": {
-    "shadow-cljs": "^3.3.7",
+    "shadow-cljs": "^3.4.1",
     "shadow-cljs-vite-plugin": "link:../..",
-    "vite": "^8.0.3"
+    "vite": "^8.0.8"
   }
 }

@@ -18,10 +18,10 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
-    "shadow-cljs": "^3.3.8",
+    "shadow-cljs": "^3.4.1",
     "shadow-cljs-vite-plugin": "link:../..",
     "typescript": "^6.0.2",
-    "vite": "^8.0.3",
+    "vite": "^8.0.8",
     "wrangler": "^4.79.0"
   }
 }
