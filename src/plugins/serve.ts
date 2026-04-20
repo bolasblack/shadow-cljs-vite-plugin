@@ -53,25 +53,33 @@ export function createServePlugin(
       const unlistenShadowProcessOutputs =
         handleShadowProcessOutputs(newShadowProcess);
 
+      // Last-resort SIGKILL — force mode has no `await`, so the
+      // SIGKILL is sent synchronously before the process terminates.
+      const onProcessExit = () =>
+        void stopGlobalShadowProcess({ force: true });
+
+      // Signal cleanup — pnpm may kill us at any await, so use force.
+      // force mode sends SIGKILL synchronously (no await), then we exit.
+      const onSignal = () => {
+        void stopGlobalShadowProcess({ force: true });
+        process.exit(0);
+      };
+
+      // Detach process-level listeners on cleanup — otherwise Vite restarts
+      // (auto-restart on shadow-cljs.edn changes) re-invoke configureServer
+      // and the handlers accumulate past MaxListeners.
       const cleanup = async (opts?: { force?: boolean }) => {
+        process.off("exit", onProcessExit);
+        process.off("SIGINT", onSignal);
+        process.off("SIGTERM", onSignal);
         await stopGlobalShadowProcess(opts);
         unlistenShadowProcessOutputs();
       };
 
       server.httpServer?.once("close", () => void cleanup());
-
-      // Last-resort SIGKILL — force mode has no `await`, so the
-      // SIGKILL is sent synchronously before the process terminates.
-      process.once("exit", () => void stopGlobalShadowProcess({ force: true }));
-
-      // Signal cleanup — pnpm may kill us at any await, so use force.
-      // force mode sends SIGKILL synchronously (no await), then we exit.
-      const signalCleanup = () => {
-        void stopGlobalShadowProcess({ force: true });
-        process.exit(0);
-      };
-      process.once("SIGINT", signalCleanup);
-      process.once("SIGTERM", signalCleanup);
+      process.once("exit", onProcessExit);
+      process.once("SIGINT", onSignal);
+      process.once("SIGTERM", onSignal);
     },
   };
 }

@@ -100,6 +100,7 @@ export function createVirtualModulePlugin(
           content,
           filePath,
           hasDefaultExport,
+          buildId,
         );
       }
 
@@ -117,7 +118,10 @@ export function createVirtualModulePlugin(
       for (const buildConfig of ctx.buildConfigs.values()) {
         if (!isBrowserTarget(buildConfig)) continue;
 
-        let initialBuildDone = false;
+        // Seed from existing completion state so we don't swallow the first
+        // real edit after a Vite restart (AGD-002 reuses the shadow-cljs
+        // process across restarts, so buildCompleteIds persists).
+        let initialBuildDone = state.buildCompleteIds.has(buildConfig.id);
         const unsub = state.onBuildComplete((buildId) => {
           if (buildId !== buildConfig.id) return;
           if (!initialBuildDone) {
@@ -136,8 +140,12 @@ export function createVirtualModulePlugin(
 
       // --- Step 2: On eval-complete (from client), send js-update ---
       for (const env of Object.values(server.environments)) {
-        env.hot.on?.("shadow-cljs:eval-complete", () => {
+        env.hot.on?.("shadow-cljs:eval-complete", (payload?: { buildId?: string }) => {
+          // Filter by buildId so multi-build projects don't re-render
+          // importers of builds that didn't change.
+          const onlyBuildId = payload?.buildId;
           for (const buildConfig of ctx.buildConfigs.values()) {
+            if (onlyBuildId && buildConfig.id !== onlyBuildId) continue;
             if (!isBrowserTarget(buildConfig)) continue;
             const virtualId = toResolvedVirtualId(buildConfig.id);
             const mod = env.moduleGraph.getModuleById(virtualId);
@@ -236,6 +244,7 @@ export function generateGlobalNamespaceModule(
   content: string,
   filePath: string,
   hasDefaultExport: boolean,
+  buildId: string,
 ): string {
   // Parse `export let greet = app.core.greet;` lines from shadow-cljs output
   const exportPattern = /^export let (\w+) = (.+);$/gm;
@@ -253,6 +262,7 @@ export function generateGlobalNamespaceModule(
   const declarations = exports
     .map((e) => `let ${e.name} = ${e.expr};`)
     .join("\n");
+  const buildIdLiteral = JSON.stringify(buildId);
 
   return `
 import "${filePath}";
@@ -264,16 +274,24 @@ if (import.meta.hot) {
   // shadow-cljs sends compiled code via its own WebSocket; eval updates
   // the globals.  We detect completion by comparing current globals to
   // pre-build snapshot, then signal the server to send js-update.
+  const _BUILD_ID = ${buildIdLiteral};
   const _getExports = () => [${exports.map((e) => e.expr).join(", ")}];
-  import.meta.hot.on('shadow-cljs:build-complete', () => {
+  import.meta.hot.on('shadow-cljs:build-complete', (e) => {
+    if (e?.buildId !== _BUILD_ID) return;
     const _prev = _getExports();
     let _n = 0;
     const _poll = () => {
-      if (++_n > 400 || _getExports().some((v, i) => v !== _prev[i])) {
+      if (_getExports().some((v, i) => v !== _prev[i])) {
         // Refresh let-bindings from globals BEFORE signaling the server,
         // so importers see fresh values when React re-renders.
 ${exports.map((e) => `        ${e.name} = ${e.expr};`).join("\n")}
-        import.meta.hot.send('shadow-cljs:eval-complete', {});
+        import.meta.hot.send('shadow-cljs:eval-complete', { buildId: _BUILD_ID });
+        return;
+      }
+      if (++_n > 400) {
+        // Timeout: shadow-cljs eval hasn't landed within 2s.  Surface it
+        // instead of silently shipping stale globals to importers.
+        console.warn('[shadow-cljs] build ' + _BUILD_ID + ' eval did not complete within 2s \u2014 UI may be stale until the next edit.');
         return;
       }
       setTimeout(_poll, 5);

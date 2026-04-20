@@ -214,6 +214,7 @@ describe("virtualModule plugin", () => {
         SAMPLE_CLJS_OUTPUT,
         "/test/project/.shadow-cljs-out/app/main.js",
         false,
+        "app",
       );
 
       // Should listen for build-complete custom event
